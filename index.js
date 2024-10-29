@@ -1,109 +1,134 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const { createClient, getClient, checkClientAuth, getClientQR, restartServer } = require('./functions');
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const http = require('http');
+const url = require('url');
+const { createClient, getClient, checkClientAuth, getClientQR } = require('./functions');
 
-
-const app = express();
 const PORT = 3000;
-app.use(bodyParser.json());
-app.use(cors());
 
-// Define the /api/create-client route
-app.post('/api/create-client', async (req, res) => {
-    console.log('got a call...');
-    const { phone_number, state_code } = req.body;
+// Helper function to parse JSON body data
+const parseRequestBody = (req) => {
+    return new Promise((resolve, reject) => {
+        let body = '';
+        req.on('data', chunk => {
+            body += chunk;
+        });
+        req.on('end', () => {
+            try {
+                resolve(JSON.parse(body));
+            } catch (error) {
+                reject(error);
+            }
+        });
+    });
+};
 
-    // Check for required fields
+// Handler for the /api/create-client endpoint
+async function handleCreateClient(body, res) {
+    const { phone_number, state_code } = body;
+
     if (!phone_number || !state_code) {
-        return res.status(400).json({ success: false, message: 'Phone number and state code are required.' });
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: 'Phone number and state code are required.' }));
     }
 
-    // Create a hash for the phone number
-
     try {
-        // Create the client and get the QR code
-        const client = await createClient(phone_number); // Wait for the QR code to be generated
-        // Store the hash
-        res.json({
+        const client = await createClient(phone_number);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
             success: true,
             message: 'Client created successfully.',
             data: {
-                user_hash: client.user_hash, // Return the hash to the client
-                qr_code: client.qr_code, // Return the generated QR code
+                user_hash: client.user_hash,
+                qr_code: client.qr_code,
             },
-        });
-        console.log('all good');
+        }));
     } catch (error) {
         console.error(error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to create client: ' + error.message,
-        });
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: 'Failed to create client: ' + error.message }));
     }
-});
+}
 
-// Define the /api/send-message route
-app.post('/api/send-message', async (req, res) => {
-    const { user_hash, message, recipient } = req.body;
-    console.log('sending message...');
-    // Find the user ID from the hash
-
-    // Get the client's instance using the userId
+// Handler for the /api/send-message endpoint
+async function handleSendMessage(body, res) {
+    const { user_hash, message, recipient } = body;
+    console.log('sendin message...');
     const client = getClient(user_hash);
-    // Phone number to send the message to (for testing, hardcoded number)
-    const phone_number = `972526033388@c.us`;  // WhatsApp uses '@c.us' suffix for contacts
+    const phone_number = `972526033388@c.us`;
+
     if (!client) {
-        console.log('client not found');
-        return res.status(404).json({ success: false, message: 'Client instance not found.' });
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: 'Client instance not found.' }));
     }
 
     client.on('ready', async () => {
+        console.log('client ready');
         await client.sendMessage(phone_number, message);
-        console.log('message sent');
         setTimeout(() => {
             client.destroy();
             console.log('client restarted');
         }, 1000);
     });
-
-    client.on('message_create', (message) => {
-        // console.log(message);
-        // client.destroy();
-    });
-
     client.initialize();
-    console.log('client initialized, moving on...');
-});
 
-// Define the /api/check-authentication route
-app.post('/api/check-authentication', (req, res) => {
-    const { user_hash } = req.body;
-    console.log('checking auth...');
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true, message: 'Message sent successfully.' }));
+}
 
-    // Find the user ID from the hash
+// Handler for the /api/check-authentication endpoint
+async function handleCheckAuthentication(body, res) {
+    const { user_hash } = body;
+
     const isAuth = checkClientAuth(user_hash);
 
-    if (!isAuth) {
-        console.log('not authenticated');
-        return res.status(401).json({
-            success: false,
-            authenticated: false,
-            qr_code: getClientQR(user_hash),
-            message: 'User is not authenticated yet. Please scan the QR code.'
-        });
+    res.writeHead(isAuth ? 200 : 401, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+        success: isAuth,
+        authenticated: isAuth,
+        message: isAuth ? 'User is authenticated and ready.' : 'User is not authenticated. Please scan the QR code.',
+        qr_code: !isAuth ? getClientQR(user_hash) : null,
+    }));
+}
+
+// Main POST handler function
+async function handlePostRequest(req, res, pathname) {
+    const body = await parseRequestBody(req);
+
+    switch (pathname) {
+        case '/api/create-client':
+            await handleCreateClient(body, res);
+            break;
+        case '/api/send-message':
+            await handleSendMessage(body, res);
+            break;
+        case '/api/check-authentication':
+            await handleCheckAuthentication(body, res);
+            break;
+        default:
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, message: 'Route not found' }));
     }
-    // Check the authentication status
-    return res.json({
-        success: true,
-        authenticated: true,
-        message: 'User is authenticated and ready.'
-    });
-});
+}
 
+// Main request handler function
+const requestHandler = (req, res) => {
+    const parsedUrl = url.parse(req.url, true);
+    const { pathname } = parsedUrl;
 
-// Start the server
-app.listen(PORT, () => {
+    if (req.method === 'POST') {
+        handlePostRequest(req, res, pathname).catch(error => {
+            console.error(error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, message: 'Internal Server Error' }));
+        });
+    } else {
+        res.writeHead(405, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: 'Method Not Allowed' }));
+    }
+};
+
+// Create the HTTP server
+const server = http.createServer(requestHandler);
+
+server.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
