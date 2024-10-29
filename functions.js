@@ -17,7 +17,7 @@ async function createClient(phone_number) {
     const user_hash = createHash(phone_number);
     const userId = user_hash; // Example user ID
     const client = new Client({
-        puppeteer: { headless: true }, // Set to true for headless mode
+        puppeteer: { headless: true, args: ['--no-sandbox'] }, // Set to true for headless mode
         authStrategy: new LocalAuth({ clientId: userId }),
     });
 
@@ -49,7 +49,7 @@ async function createClient(phone_number) {
 
 function getClient(userId) {
     return new Client({
-        puppeteer: { headless: true }, // Set to true for headless mode
+        puppeteer: { headless: true, args: ['--no-sandbox'] }, // Set to true for headless mode
         authStrategy: new LocalAuth({ clientId: userId }),
     });
 }
@@ -80,12 +80,12 @@ function getClientQR(userId) {
     return clients[userId].qr_code;
 }
 
-function restartServer(app, port){
-    app.close(()=>{
+function restartServer(app, port) {
+    app.close(() => {
         console.log('Server closed');
-        app.listen(port, ()=>{
+        app.listen(port, () => {
             console.log('Server restarted');
         });
     });
 }
-module.exports = { createHash, storeHash, createClient, getUserID, getClient, checkClientAuth, getClientQR,restartServer };
+module.exports = { createHash, storeHash, createClient, getUserID, getClient, checkClientAuth, getClientQR, restartServer };
