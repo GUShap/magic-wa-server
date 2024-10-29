@@ -28,6 +28,7 @@ async function createClient(phone_number) {
             clients[userId] = { phone_number, qr_code: qr, authenticated: false };
             storeHash(user_hash);
             // Resolve the promise with the QR code
+            console.log(qr)
             resolve({ qr_code: qr, user_hash });
         });
 

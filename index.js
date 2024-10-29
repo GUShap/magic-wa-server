@@ -20,7 +20,7 @@ app.post('/api/create-client', async (req, res) => {
     }
 
     // Create a hash for the phone number
-
+        console.log(phone_number, state_code);
     try {
         // Create the client and get the QR code
         const client = await createClient(phone_number); // Wait for the QR code to be generated
