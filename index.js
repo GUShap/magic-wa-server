@@ -60,11 +60,11 @@ app.post('/api/send-message', async (req, res) => {
 
     client.on('ready', async () => {
         await client.sendMessage(phone_number, message);
-        console.log('message sent');
+        console.log(message);
         setTimeout(() => {
             client.destroy();
             console.log('client restarted');
-        }, 1000);
+        }, 10000);
     });
 
     client.on('message_create', (message) => {

@@ -33,8 +33,11 @@ async function createClient(phone_number) {
         });
 
         client.on('ready', () => {
-            console.log(`Client ${userId} is ready!`);
             clients[userId].authenticated = true;  // Mark as authenticated
+            setTimeout(() => {
+                client.destroy();
+                console.log(`Client ${userId} is ready!`);
+            }, 3000);
         });
 
         client.on('auth_failure', () => {
