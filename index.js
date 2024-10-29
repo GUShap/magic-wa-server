@@ -2,7 +2,6 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const { createClient, getClient, checkClientAuth, getClientQR, restartServer } = require('./functions');
-const { Client, LocalAuth } = require('whatsapp-web.js');
 
 
 const app = express();
