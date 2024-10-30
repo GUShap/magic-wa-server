@@ -1,4 +1,4 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth, RemoteAuth } = require('whatsapp-web.js');
 const crypto = require('crypto');
 
 const clients = {};
@@ -28,7 +28,6 @@ async function createClient(phone_number) {
             clients[userId] = { phone_number, qr_code: qr, authenticated: false };
             storeHash(user_hash);
             // Resolve the promise with the QR code
-            console.log(qr)
             resolve({ qr_code: qr, user_hash });
         });
 
@@ -36,13 +35,18 @@ async function createClient(phone_number) {
             clients[userId].authenticated = true;  // Mark as authenticated
             setTimeout(() => {
                 client.destroy();
-                console.log(`Client ${userId} is ready!`);
-            }, 3000);
+                console.log(`Client ${phone_number} is ready!`);
+            }, 8000);
         });
 
         client.on('auth_failure', () => {
             reject(new Error('Authentication failed.'));
         });
+
+        client.on("authenticated", async () => {
+            console.log("Authenticated");
+            clients[userId].authenticated = true;  // Mark as authenticated
+          });
 
         client.initialize();
 
@@ -69,13 +73,6 @@ function checkClientAuth(userId) {
     if (!clients[userId]) {
         return false;
     }
-    // console.log(clients[userId].authenticated);
-
-    // if (!clients[userId].hasOwnProperty(authenticated)) {
-    //     clients[userId].authenticated = false;
-    //     return false;
-    // }
-
 
     return clients[userId].authenticated;
 }

@@ -20,7 +20,7 @@ app.post('/api/create-client', async (req, res) => {
     }
 
     // Create a hash for the phone number
-        console.log(phone_number, state_code);
+    console.log(phone_number, state_code);
     try {
         // Create the client and get the QR code
         const client = await createClient(phone_number); // Wait for the QR code to be generated
@@ -52,7 +52,7 @@ app.post('/api/send-message', async (req, res) => {
     // Get the client's instance using the userId
     const client = getClient(user_hash);
     // Phone number to send the message to (for testing, hardcoded number)
-    const phone_number = `972526033388@c.us`;  // WhatsApp uses '@c.us' suffix for contacts
+    const phone_number = `${recipient}@c.us`;  // WhatsApp uses '@c.us' suffix for contacts
     if (!client) {
         console.log('client not found');
         return res.status(404).json({ success: false, message: 'Client instance not found.' });
@@ -60,21 +60,46 @@ app.post('/api/send-message', async (req, res) => {
 
     client.on('ready', async () => {
         await client.sendMessage(phone_number, message);
-        console.log(message);
+        console.log('message sent, Restarting client...');
         setTimeout(() => {
             client.destroy();
             console.log('client restarted');
         }, 10000);
     });
 
-    client.on('message_create', (message) => {
-        // console.log(message);
-        // client.destroy();
+    client.initialize();
+    console.log('client initialized, moving on...');
+});
+
+app.post('/api/send-messages', async (req, res) => {
+    console.log('sending messages...');
+
+    const { user_hash, messages_data } = req.body;
+    const client = getClient(user_hash);
+
+    if (!client) {
+        console.log('client not found');
+        return res.status(404).json({ success: false, message: 'Client instance not found.' });
+    }
+
+    client.on('ready', async () => {
+        for (const recipient of messages_data) {
+            const message = messages_data[recipient];
+            const phone_number = `${recipient}@c.us`;
+            await client.sendMessage(phone_number, message);
+        }
+        console.log('messages sent, Restarting client...');
+        setTimeout(() => {
+            client.destroy();
+            console.log('client restarted');
+        }, 10000);
     });
 
     client.initialize();
     console.log('client initialized, moving on...');
+
 });
+
 
 // Define the /api/check-authentication route
 app.post('/api/check-authentication', (req, res) => {
