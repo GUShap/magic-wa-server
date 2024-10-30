@@ -5,7 +5,8 @@ const { createClient, getClient, checkClientAuth, getClientQR, restartServer } =
 
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+const PUBLIC_DOMAIN = typeof RAILWAY_PUBLIC_DOMAIN !== 'undefined' ? RAILWAY_PUBLIC_DOMAIN : 'http://localhost:3000';
 app.use(bodyParser.json());
 app.use(cors());
 
@@ -82,9 +83,9 @@ app.post('/api/send-messages', async (req, res) => {
         return res.status(404).json({ success: false, message: 'Client instance not found.' });
     }
 
+
     client.on('ready', async () => {
-        for (const recipient of messages_data) {
-            const message = messages_data[recipient];
+        for (const [recipient, message] of Object.entries(messages_data)) {
             const phone_number = `${recipient}@c.us`;
             await client.sendMessage(phone_number, message);
         }
@@ -99,7 +100,6 @@ app.post('/api/send-messages', async (req, res) => {
     console.log('client initialized, moving on...');
 
 });
-
 
 // Define the /api/check-authentication route
 app.post('/api/check-authentication', (req, res) => {
@@ -129,5 +129,5 @@ app.post('/api/check-authentication', (req, res) => {
 
 // Start the server
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`Server is running on ${PUBLIC_DOMAIN}`);
 });
