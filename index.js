@@ -6,7 +6,7 @@ const { createClient, getClient, checkClientAuth, getClientQR, restartServer } =
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const PUBLIC_DOMAIN = typeof RAILWAY_PUBLIC_DOMAIN !== 'undefined' ? RAILWAY_PUBLIC_DOMAIN : 'http://localhost:3000';
+const PUBLIC_DOMAIN = typeof process.env.RAILWAY_PUBLIC_DOMAIN !== 'undefined' ? process.env.RAILWAY_PUBLIC_DOMAIN : 'http://localhost:3000';
 app.use(bodyParser.json());
 app.use(cors());
 
