@@ -85,7 +85,9 @@ app.post('/api/send-messages', async (req, res) => {
 
 
     client.on('ready', async () => {
+        console.log(messages_data);
         for (const [recipient, message] of Object.entries(messages_data)) {
+            if (!recipient || !message) return;
             const phone_number = `${recipient}@c.us`;
             await client.sendMessage(phone_number, message);
         }
