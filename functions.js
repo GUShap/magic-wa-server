@@ -13,8 +13,9 @@ function storeHash(user_hash) {
 }
 
 // Function to create a new WhatsApp client
-async function createClient(phone_number) {
-    const user_hash = createHash(phone_number);
+async function createClient(phone_number, sourceURL) {
+    const user_hash = createHash(phone_number + sourceURL);
+    console.log(user_hash);
     const userId = user_hash; // Example user ID
     const client = new Client({
         puppeteer: { headless: true, args: ['--no-sandbox'] }, // Set to true for headless mode

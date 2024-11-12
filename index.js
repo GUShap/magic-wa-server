@@ -12,9 +12,9 @@ app.use(cors());
 
 // Define the /api/create-client route
 app.post('/api/create-client', async (req, res) => {
-    console.log('got a call...');
     const { phone_number, state_code } = req.body;
-
+    const sourceURL = req.headers.origin;
+    console.log(`got a call from ${sourceURL}...`);
     // Check for required fields
     if (!phone_number || !state_code) {
         return res.status(400).json({ success: false, message: 'Phone number and state code are required.' });
@@ -24,7 +24,7 @@ app.post('/api/create-client', async (req, res) => {
     console.log(phone_number, state_code);
     try {
         // Create the client and get the QR code
-        const client = await createClient(phone_number); // Wait for the QR code to be generated
+        const client = await createClient(phone_number, sourceURL); // Wait for the QR code to be generated
         // Store the hash
         res.json({
             success: true,
